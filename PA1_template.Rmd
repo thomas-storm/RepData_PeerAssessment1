@@ -1,25 +1,151 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+output: html_document
+keep_md: true
 ---
+
+Set knitr options to not show warnings and messages
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+## Loading required packages
+
+```{r load packages}
+library(tidyverse)
+library(lattice)
+```
 
 
 ## Loading and preprocessing the data
 
+### Download data
+
+Check if data sub-directory exists, if not download and unzip files in data folder
+
+```{r download data}
+
+main_dir <- getwd()
+sub_dir <- "data"
+
+## check if "data" sub-directory exists, if not download and unzip files in data folder
+if (!dir.exists(sub_dir)){
+  url <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
+  temp <- tempfile()
+  dir.create(paste(main_dir, sub_dir, sep ="/"))
+  download.file(url, temp)
+  unzip(zipfile = temp, exdir = file.path(paste(main_dir, sub_dir, sep ="/")))
+  unlink(c(temp))
+  rm(temp)
+} else {print("data available")}
+
+```
+
+Data are downloaded and in the data folder.
+
+### Read data
+
+Read data with read.csv and show head() 
+
+```{r read data)}
+
+activity <- read.csv("./data/activity.csv", header = TRUE)
+
+head(activity)
+str(activity)
+summary(activity)
+
+```
+
+### Pre-process data
+
+```{r preprocess}
+
+activity <- activity %>% mutate(date = ymd(date))
+
+```
 
 
 ## What is mean total number of steps taken per day?
 
+```{r activty per day}
 
+steps.day <- activity %>% group_by(date) %>% summarize(sum = sum(steps, na.rm = TRUE))
+
+hist(steps.day$sum, 
+                breaks = 12,
+                xlab = "Steps per day",
+                main = "Histogram of Total Steps per day")
+box()
+
+summary(steps.day$sum)
+
+```
 
 ## What is the average daily activity pattern?
 
+```{r daily.activity}
 
+daily.activity <- activity %>% group_by(interval) %>% summarize(mean = mean(steps, na.rm = TRUE))
+
+with(daily.activity, plot(interval, mean, 
+                          type = "l",
+                          xlab = "Time interval",
+                          ylab = "Average steps",
+                          xaxt = "n"))
+
+axis(1, c(0, 600, 1200, 1800, 2400), c("0:00", "6:00", "12:00", "18:00", "24:00"))
+
+daily.activity$interval[daily.activity$mean == max(daily.activity$mean)]
+
+```
 
 ## Imputing missing values
 
+```{r missing values}
 
+activity.imputed <- activity %>% 
+                        group_by(interval) %>% 
+                        mutate(daily_mean = mean(steps, na.rm = TRUE)) %>%
+                        mutate(steps.imputed = coalesce(steps, daily_mean))
+
+steps.day.imputed <- activity.imputed %>% group_by(date) %>% summarize(sum = sum(steps.imputed, na.rm = TRUE))
+
+hist(steps.day.imputed$sum, 
+                breaks = 12,
+                xlab = "Steps per day",
+                main = "Histogram of Total Steps per day (NAs imputed)")
+box()
+
+summary(steps.day.imputed$sum)
+
+```
+
+        
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+```{r weekend}
+
+weekend.weekday <- activity.imputed %>% 
+        mutate(week.day = weekdays(date)) %>% 
+        mutate(weekend = week.day %in% c("Saturday", "Sunday")) %>%
+        group_by(interval, weekend) %>%
+        summarise(mean = mean(steps.imputed))
+
+xyplot(mean ~ interval | weekend, 
+                                data = weekend.weekday,
+                                type = "l",
+                                xlab = "Time interval",
+                                ylab = "Average steps per Time Interval",
+                                strip = strip.custom(factor.levels = c("Working days", "Weekends")),
+                                scales = list(x=list(
+                                        at = c(0, 600, 1200, 1800, 2400),
+                                        labels = c("0:00", "6:00", "12:00", "18:00", "24:00")))
+)
+
+```
+
+
