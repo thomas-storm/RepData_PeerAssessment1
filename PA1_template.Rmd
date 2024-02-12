@@ -2,9 +2,11 @@
 title: "Reproducible Research: Peer Assessment 1"
 output: html_document
 keep_md: true
+date: 2024-02-12 
 ---
+## Set knitr options
 
-Set knitr options to not show warnings and messages
+Set knitr options to not show warnings and messages to make the document less verbose.
 
 ```{r setup, include=TRUE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -12,6 +14,8 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 ```
 
 ## Loading required packages
+
+Data processing will be done with dplyr and lubridate, therefore loading the tidyverse package. Plot are done with lattice package.
 
 ```{r load packages}
 library(tidyverse)
@@ -23,7 +27,7 @@ library(lattice)
 
 ### Download data
 
-Check if data sub-directory exists, if not download and unzip files in data folder
+Data are downloaded using link provided in instructions. Code checks whether data sub-directory exists, and if not, downloads and unzips file in data directory.
 
 ```{r download data}
 
@@ -47,97 +51,132 @@ Data are downloaded and in the data folder.
 
 ### Read data
 
-Read data with read.csv and show head() 
+Read data with read.csv 
 
 ```{r read data)}
 
 activity <- read.csv("./data/activity.csv", header = TRUE)
 
-head(activity)
 str(activity)
-summary(activity)
 
 ```
 
 ### Pre-process data
 
+Data pre-processing to mutate date from chr to date. The rest of the data processing will be done specific for each question in a pipe. 
+
 ```{r preprocess}
 
-activity <- activity %>% mutate(date = ymd(date))
+activity <- activity %>% 
+                mutate(date = ymd(date))
+
+str(activity)
 
 ```
 
 
 ## What is mean total number of steps taken per day?
 
+Steps are summed up per date and displayed in a histogram. Missing values are not removed, and show up in the first bin.
+
 ```{r activty per day}
 
 steps.day <- activity %>% group_by(date) %>% summarize(sum = sum(steps, na.rm = TRUE))
 
-hist(steps.day$sum, 
-                breaks = 12,
+histogram(~sum, data = steps.day,
+                main = "Histogram of total steps per day",
                 xlab = "Steps per day",
-                main = "Histogram of Total Steps per day")
-box()
+                breaks = 12)
 
 summary(steps.day$sum)
 
 ```
+The mean total number of steps taken per day is **mean = `r round(summary(steps.day$sum)[4],0)`**, while the median total number of steps taken per day is **median = `r as.integer(summary(steps.day$sum)[3])`**. The distribution is a bit skewed by the missing values (i.e. the NAs).
 
 ## What is the average daily activity pattern?
+
+The steps are grouped by interval and then summarized as mean.
 
 ```{r daily.activity}
 
 daily.activity <- activity %>% group_by(interval) %>% summarize(mean = mean(steps, na.rm = TRUE))
 
-with(daily.activity, plot(interval, mean, 
-                          type = "l",
-                          xlab = "Time interval",
-                          ylab = "Average steps",
-                          xaxt = "n"))
-
-axis(1, c(0, 600, 1200, 1800, 2400), c("0:00", "6:00", "12:00", "18:00", "24:00"))
+xyplot(mean ~ interval, 
+                                data = daily.activity,
+                                type = "l",
+                                main = "Average daily activity pattern",
+                                xlab = "Time interval",
+                                ylab = "Average steps per Time Interval",
+                                scales = list(x=list(
+                                        at = c(0, 600, 1200, 1800, 2400),
+                                        labels = c("0:00", "6:00", "12:00", "18:00", "24:00")))
+)
 
 daily.activity$interval[daily.activity$mean == max(daily.activity$mean)]
 
 ```
+There is a distinct activity patter, with low activity during the night, an activity peak at **interval = `r daily.activity$interval[daily.activity$mean == max(daily.activity$mean)]`**, indicating a repeating activity pattern in the morning (e.g. walking to the office or a regular sports activity in the morning). Activity remains at an elevated level until it drops in the evenings after approximately 19:00 pm.
 
 ## Imputing missing values
 
-```{r missing values}
+The number of NAs in the file were calculated.
 
-activity.imputed <- activity %>% 
+```{r number of missing values}
+
+sum(is.na(activity))
+
+```
+
+The number of NAs is **Number NAs = `r sum(is.na(activity))`**. The NA values are all in the steps column. The percentage of NAs was also calculated.
+
+```{r percentage missing values}
+
+sum(is.na(activity$steps))/(sum(is.na(activity$steps)) + sum(!is.na(activity$steps)))*100
+
+```
+
+Overall, there are approximately **NAs ~ `r round(sum(is.na(activity$steps))/(sum(is.na(activity$steps)) + sum(!is.na(activity$steps)))*100, 0)`%** missing values in the steps column.
+
+Missing values (i.e. NAs) were imputed by calculating the mean number of steps for each interval and replacing missing values in an interval with the mean number of steps in the same interval. This should preserve the main trends in the data.  
+
+```{r imputation of missing values}
+
+steps.day.imputed <- activity %>% 
                         group_by(interval) %>% 
                         mutate(daily_mean = mean(steps, na.rm = TRUE)) %>%
-                        mutate(steps.imputed = coalesce(steps, daily_mean))
+                        mutate(steps.imputed = coalesce(steps, daily_mean)) %>%
+                        group_by(date) %>% 
+                        summarize(sum = sum(steps.imputed, na.rm = TRUE))
 
-steps.day.imputed <- activity.imputed %>% group_by(date) %>% summarize(sum = sum(steps.imputed, na.rm = TRUE))
-
-hist(steps.day.imputed$sum, 
-                breaks = 12,
+histogram(~sum, data = steps.day.imputed,
+                main = "Histogram of total steps per day (NAs imputed)",
                 xlab = "Steps per day",
-                main = "Histogram of Total Steps per day (NAs imputed)")
-box()
+                breaks = 12)
 
 summary(steps.day.imputed$sum)
 
 ```
-
-        
+After imputation of NAs the mean total number of steps taken per day is **mean = `r as.integer(summary(steps.day.imputed$sum)[4])`**, and the median total number of steps taken per day is also **median = `r as.integer(summary(steps.day.imputed$sum)[3])`**. The mean and the median are identical, indicating that the imputation of NAs effectively removed the skew in the distribution.
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
+The daily activity pattern on working days (Mo - Fr) and on Weekeds (Sa, Su) are compared.
+
 ```{r weekend}
 
-weekend.weekday <- activity.imputed %>% 
-        mutate(week.day = weekdays(date)) %>% 
-        mutate(weekend = week.day %in% c("Saturday", "Sunday")) %>%
-        group_by(interval, weekend) %>%
-        summarise(mean = mean(steps.imputed))
+weekend.weekday <- activity %>% 
+                        group_by(interval) %>% 
+                        mutate(daily_mean = mean(steps, na.rm = TRUE)) %>%
+                        mutate(steps.imputed = coalesce(steps, daily_mean)) %>%
+                        mutate(week.day = weekdays(date)) %>% 
+                        mutate(weekend = week.day %in% c("Saturday", "Sunday")) %>%
+                        group_by(interval, weekend) %>%
+                        summarise(mean = mean(steps.imputed))
 
 xyplot(mean ~ interval | weekend, 
                                 data = weekend.weekday,
                                 type = "l",
+                                main = "Daily activity pattern",
                                 xlab = "Time interval",
                                 ylab = "Average steps per Time Interval",
                                 strip = strip.custom(factor.levels = c("Working days", "Weekends")),
@@ -148,4 +187,5 @@ xyplot(mean ~ interval | weekend,
 
 ```
 
+There are different activity pattern on working days as compared to weekends. The activity picks up later in the morning on weekends, and the distinct activity peak in the morning is less pronounced on the weekends as well. In general, activity seems to be less on weekends.  
 
