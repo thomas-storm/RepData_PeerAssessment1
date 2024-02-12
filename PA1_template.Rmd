@@ -2,6 +2,7 @@
 title: "Reproducible Research: Peer Assessment 1"
 output: html_document
 keep_md: true
+author: Thomas Storm
 date: 2024-02-12 
 ---
 ## Set knitr options
@@ -81,7 +82,9 @@ Steps are summed up per date and displayed in a histogram. Missing values are no
 
 ```{r activty per day}
 
-steps.day <- activity %>% group_by(date) %>% summarize(sum = sum(steps, na.rm = TRUE))
+steps.day <- activity %>%
+                group_by(date) %>% 
+                summarize(sum = sum(steps, na.rm = TRUE))
 
 histogram(~sum, data = steps.day,
                 main = "Histogram of total steps per day",
@@ -99,7 +102,9 @@ The steps are grouped by interval and then summarized as mean.
 
 ```{r daily.activity}
 
-daily.activity <- activity %>% group_by(interval) %>% summarize(mean = mean(steps, na.rm = TRUE))
+daily.activity <- activity %>% 
+                        group_by(interval) %>%
+                        summarize(mean = mean(steps, na.rm = TRUE))
 
 xyplot(mean ~ interval, 
                                 data = daily.activity,
@@ -176,6 +181,7 @@ weekend.weekday <- activity %>%
 xyplot(mean ~ interval | weekend, 
                                 data = weekend.weekday,
                                 type = "l",
+                                layout = c(1,2),
                                 main = "Daily activity pattern",
                                 xlab = "Time interval",
                                 ylab = "Average steps per Time Interval",
@@ -187,5 +193,5 @@ xyplot(mean ~ interval | weekend,
 
 ```
 
-There are different activity pattern on working days as compared to weekends. The activity picks up later in the morning on weekends, and the distinct activity peak in the morning is less pronounced on the weekends as well. In general, activity seems to be less on weekends.  
+There are different activity pattern on working days as compared to weekends. The activity picks up later in the morning on weekends, and the distinct activity peak in the morning is less pronounced on the weekends as well. In general, activity on weekends has slightly higher average activity throughout the day.
 
