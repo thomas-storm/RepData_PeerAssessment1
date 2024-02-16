@@ -1,6 +1,6 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
-output: powerpoint_presentation
+output: github_document
 keep_md: true
 author: Thomas Storm
 date: 2024-02-12 
