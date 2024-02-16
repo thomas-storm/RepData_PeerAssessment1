@@ -1,6 +1,6 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
-output: github_document
+output: powerpoint_presentation
 keep_md: true
 author: Thomas Storm
 date: 2024-02-12 
@@ -21,6 +21,7 @@ Data processing will be done with dplyr and lubridate, therefore loading the tid
 ```{r load packages}
 library(tidyverse)
 library(lattice)
+library(rvg)
 ```
 
 

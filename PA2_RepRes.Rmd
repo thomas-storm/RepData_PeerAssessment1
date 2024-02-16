@@ -1,0 +1,77 @@
+---
+title: "Reproducible Research: Peer Assessment 2"
+output: html_document
+keep_md: true
+author: Thomas Storm
+date: 2024-02-12 
+---
+## Set knitr options
+
+Set knitr options to not show warnings and messages to make the document less verbose.
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE) 
+```
+
+## Loading required packages
+
+Data processing will be done with dplyr and lubridate, therefore loading the tidyverse package. Plot are done with lattice package.
+
+```{r load packages}
+library(tidyverse)
+library(lattice)
+library(R.utils)
+```
+
+
+## Loading and preprocessing the data
+
+### Download data
+
+Data are downloaded using link provided in instructions. Code checks whether data sub-directory exists, and if not, downloads and unzips file in data directory.
+
+```{r download data}
+
+main_dir <- getwd()
+sub_dir <- "data1"
+
+## check if "data" sub-directory exists, if not download and unzip files in data folder
+if (!dir.exists(sub_dir)){
+  url <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+  temp <- tempfile()
+  dir.create(paste(main_dir, sub_dir, sep ="/"))
+  download.file(url, temp)
+  
+  bunzip2(filename = temp, destname = file.path(paste(main_dir, sub_dir,"StormData.csv", sep ="/")), remove = FALSE)
+  unlink(c(temp))
+  rm(temp)
+} else {print("data available")}
+
+```
+
+Data are downloaded and in the data folder.
+
+### Read data
+
+Read data with read.csv 
+
+```{r read data, cache=TRUE}
+
+StormData <- read.csv("./data1/StormData.csv", header = TRUE)
+
+```
+
+### Have a look
+
+```{r check data}
+StormData1 <- StormData[1:5000, ]
+
+StormData1$BGN_DATE <- gsub(' 0:00:00','', StormData1$BGN_DATE)
+
+StormData1$BGN_DATE <- mdy(StormData1$BGN_DATE)
+str(StormData1)
+head(StormData1)
+unique(StormData1$EVTYPE)
+plot(StormData1$BGN_DATE, StormData1$FATALITIES)
+```
+
